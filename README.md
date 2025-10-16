@@ -13,12 +13,6 @@
 
 Установка и запуск
 1. Создать виртуальное окружение:
-   - Windows:
-     ```
-     python -m venv .venv
-     [activate](http://_vscodecontentref_/8)
-     ```
-   - macOS / Linux:
      ```
      python -m venv .venv
      source .venv/bin/activate
