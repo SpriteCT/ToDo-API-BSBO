@@ -13,10 +13,10 @@
 
 Установка и запуск
 1. Создать виртуальное окружение:
-     ```
-     python -m venv .venv
-     source .venv/bin/activate
-     ```
+```
+python -m venv .venv
+source .venv/bin/activate
+```
 2. Установить зависимости:
 ```
 pip install -r requirements.txt
