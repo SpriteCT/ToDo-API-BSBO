@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from typing import List, Dict, Any
 from datetime import datetime
 from routers import tasks
+from routers import stats
 
 app = FastAPI(
     title="ToDo лист API",
@@ -11,7 +12,8 @@ app = FastAPI(
     name="Саранцев Антон Игоревич"
 )
 
-app.include_router(tasks.router)
+app.include_router(tasks.router, prefix="/api/v1")
+app.include_router(stats.router, prefix="/api/v1")
 
 @app.get("/")
 async def welcome() -> dict:
