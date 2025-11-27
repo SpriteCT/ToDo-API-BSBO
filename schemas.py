@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from typing import Optional
 from datetime import datetime
 
@@ -24,6 +24,10 @@ class TaskBase(BaseModel):
     is_urgent: bool = Field(
         ...,
         description="Срочность задачи"
+    )
+    deadline_at: datetime = Field(
+        ...,
+        description="Крайний срок выполнения задачи"
     )
 
 
@@ -59,6 +63,10 @@ class TaskUpdate(BaseModel):
         None,
         description="Статус выполнения"
     )
+    deadline_at: Optional[datetime] = Field(
+        None,
+        description="Новый крайний срок"
+    )
 
 
 # Модель для ответа (TaskResponse)
@@ -84,5 +92,12 @@ class TaskResponse(TaskBase):
         description="Дата и время создания задачи"
     )
 
+    @computed_field
+    @property
+    def days_left(self) -> int:
+
+        return (self.deadline_at.date() - datetime.utcnow().date()).days
+    
+    
     class Config:  # Config класс для работы с ORM (понадобится после подключения СУБД)
         from_attributes = True

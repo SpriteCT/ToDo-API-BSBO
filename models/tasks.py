@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from database import Base
+from datetime import datetime
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -53,6 +54,12 @@ class Task(Base):
         DateTime(timezone=True),
         nullable=True # NULL пока задача не завершена
     )
+
+    deadline_at = Column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+
 def __repr__(self) -> str:
     return f"<Task(id={self.id}, title='{self.title}', quadrant='{self.quadrant}')>"
 
@@ -68,3 +75,19 @@ def to_dict(self) -> dict:
         "created_at": self.created_at,
         "completed_at": self.completed_at
  }
+
+def is_urgent_from_deadline(deadline_at: datetime) -> bool:
+    days_left = (deadline_at.date() - datetime.utcnow().date()).days 
+    return days_left <= 3
+
+
+def calc_quadrant(is_important: bool, deadline_at: datetime) -> str:
+    urgent = is_urgent_from_deadline(deadline_at)
+    if is_important and urgent:
+        return "Q1"
+    elif is_important and not urgent:
+        return "Q2"
+    elif not is_important and urgent:
+        return "Q3"
+    else:
+        return "Q4"
