@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, computed_field
 from typing import Optional
 from datetime import datetime
-
+from utils import is_urgent_from_deadline
 
 # Базовая схема для Task.
 # Все поля, которые есть в нашей "базе данных" tasks_db
@@ -21,12 +21,8 @@ class TaskBase(BaseModel):
         ...,
         description="Важность задачи"
     )
-    is_urgent: bool = Field(
-        ...,
-        description="Срочность задачи"
-    )
-    deadline_at: datetime = Field(
-        ...,
+    deadline_at: Optional[datetime] = Field(
+        None,
         description="Крайний срок выполнения задачи"
     )
 
@@ -95,9 +91,33 @@ class TaskResponse(TaskBase):
     @computed_field
     @property
     def days_left(self) -> int:
-
+        if self.deadline_at is None:
+            return None
         return (self.deadline_at.date() - datetime.utcnow().date()).days
     
+    @computed_field
+    @property
+    def is_urgent(self) -> bool:
+
+        return is_urgent_from_deadline(self.deadline_at)
     
     class Config:  # Config класс для работы с ORM (понадобится после подключения СУБД)
         from_attributes = True
+
+class TimingStatsResponse(BaseModel):
+    completed_on_time: int = Field(
+        ...,
+        description="Количество задач, завершенных в срок"
+    )
+    completed_late: int = Field(
+        ...,
+        description="Количество задач, завершенных с нарушением сроков"
+    )
+    on_plan_pending: int = Field(
+        ...,
+        description="Количество задач в работе, выполняемых в соответствии с планом"
+    )
+    overtime_pending: int = Field(
+        ...,
+        description="Количество просроченных незавершенных задач"
+    )

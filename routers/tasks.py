@@ -3,10 +3,12 @@ from typing import List
 from datetime import datetime
 from schemas import TaskCreate, TaskUpdate, TaskResponse
 from database import get_async_session
-from models.tasks import Task, calc_quadrant
+from models.tasks import Task
+from utils import calc_quadrant
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import func
 
 
 router = APIRouter(
@@ -112,6 +114,28 @@ async def search_tasks(
 
     return tasks
 
+@router.get("/today", response_model=List[TaskResponse])
+async def get_tasks_due_today(
+    db: AsyncSession = Depends(get_async_session),
+) -> List[TaskResponse]:
+    from datetime import datetime
+
+    today = datetime.utcnow().date()  # текущая дата в UTC
+
+    # SELECT * FROM tasks WHERE DATE(deadline_at) = today
+    result = await db.execute(
+        select(Task).where(func.date(Task.deadline_at) == today)
+    )
+    tasks = result.scalars().all()
+
+    if not tasks:
+        raise HTTPException(
+            status_code=404,
+            detail="На сегодня задач не найдено"
+        )
+
+    return tasks
+
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task_by_id(
     task_id: int,
@@ -205,4 +229,5 @@ async def delete_task(
         "id": deleted_task_info["id"],
         "title": deleted_task_info["title"],
     }
+
 

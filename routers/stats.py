@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 
 from models import Task
 from database import get_async_session
+from schemas import TimingStatsResponse
 
 
 router = APIRouter(
@@ -31,7 +32,7 @@ async def get_tasks_stats(
             by_status["completed"] += 1
         else:
             by_status["pending"] += 1
-
+            
     return {
         "total_tasks": total_tasks,
         "by_quadrant": by_quadrant,
@@ -63,3 +64,72 @@ async def get_pending_deadlines(
             }
         )
     return data
+
+@router.get("/timing", response_model=TimingStatsResponse)
+async def get_deadline_stats(
+    db: AsyncSession = Depends(get_async_session)
+) -> TimingStatsResponse:
+    """
+    Статистика по срокам выполнения задач:
+    - завершенные в срок / с опозданием
+    - незавершенные в плане / просроченные
+    """
+    now_utc = datetime.now(timezone.utc)
+
+    statement = select(
+        func.sum(
+            case(
+                (
+                    (Task.completed == True) &
+                    (Task.completed_at <= Task.deadline_at),
+                    1
+                ),
+                else_=0
+            )
+        ).label("completed_on_time"),
+        
+        func.sum(
+            case(
+                (
+                    (Task.completed == True) &
+                    (Task.completed_at > Task.deadline_at),
+                    1
+                ),
+                else_=0
+            )
+        ).label("completed_late"),
+        
+        func.sum(
+            case(
+                (
+                    (Task.completed == False) &
+                    (Task.deadline_at != None) &
+                    (Task.deadline_at > now_utc),
+                    1
+                ),
+                else_=0
+            )
+        ).label("on_plan_pending"),
+        
+        func.sum(
+            case(
+                (
+                    (Task.completed == False) &
+                    (Task.deadline_at != None) &
+                    (Task.deadline_at <= now_utc),
+                    1
+                ),
+                else_=0
+            )
+        ).label("overdue_pending"),
+    ).select_from(Task)
+
+    result = await db.execute(statement)
+    stats_row = result.one()
+
+    return TimingStatsResponse(
+        completed_on_time=stats_row.completed_on_time or 0,
+        completed_late=stats_row.completed_late or 0,
+        on_plan_pending=stats_row.on_plan_pending or 0,
+        overtime_pending=stats_row.overdue_pending or 0,
+    )

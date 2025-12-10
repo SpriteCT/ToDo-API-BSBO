@@ -3,8 +3,7 @@ from sqlalchemy.orm import DeclarativeBase
 from typing import AsyncGenerator
 import os
 from dotenv import load_dotenv
-
-
+from sqlalchemy.pool import NullPool
 
 try:
     from models import Base
@@ -16,8 +15,12 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_async_engine(
-    DATABASE_URL,
-    connect_args={"statement_cache_size": 0}
+    DATABASE_URL + "?prepared_statement_cache_size=0",
+    poolclass=NullPool,          
+    connect_args={
+        "statement_cache_size": 0,
+    },
+    echo =True
 )
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

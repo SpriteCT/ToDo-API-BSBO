@@ -7,19 +7,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import init_db, get_async_session
 from routers import tasks, stats
 
+from scheduler import start_scheduler
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Код ДО yield выполняется при ЗАПУСКЕ
     print("Запуск приложения...")
     print("Инициализация базы данных...")
+
     # Создаем таблицы (если их нет)
     await init_db()
-    print("Приложение готово к работе!")
+    print("База данных инициализирована.")
 
+    # Запускаем планировщик задач
+    scheduler = start_scheduler()
+
+    print("Приложение готово к работе!")
     yield  # Здесь приложение работает
 
     # Код ПОСЛЕ yield выполняется при ОСТАНОВКЕ
+    print("Остановка планировщика задач...")
+    scheduler.shutdown()
+
     print("Остановка приложения...")
 
 
@@ -28,7 +38,7 @@ app = FastAPI(
     description="API для управления задачами с использованием матрицы Эйзенхауэра",
     version="2.0.0",
     contact={
-        "name": "Ваше Имя",
+        "name": "Антон Саранцев",
     },
     lifespan=lifespan,  # Подключаем lifespan
 )
