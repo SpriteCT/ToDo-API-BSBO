@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import init_db, get_async_session
-from routers import tasks, stats
+from routers import tasks, stats, auth
 
 from scheduler import start_scheduler
 
@@ -44,15 +44,16 @@ app = FastAPI(
 )
 
 # Подключение роутеров к приложению
-app.include_router(tasks.router, prefix="/api/v2")
-app.include_router(stats.router, prefix="/api/v2")
+app.include_router(tasks.router, prefix="/api/v3")
+app.include_router(stats.router, prefix="/api/v3")
+app.include_router(auth.router, prefix="/api/v3")
 
 
 @app.get("/")
 async def read_root() -> dict:
     return {
         "message": "Task Manager API - Управление задачами по матрице Эйзенхауэра",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "database": "PostgreSQL (Supabase)",
         "docs": "/docs",
         "redoc": "/redoc",
