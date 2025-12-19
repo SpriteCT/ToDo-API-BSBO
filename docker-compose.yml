@@ -26,8 +26,10 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
       SECRET_KEY: "CHANGE_ME_SECRET_KEY"
+      PORT: "${BACKEND_PORT:-8000}"
+      HOST: "0.0.0.0"
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
 
   bot:
     build:
@@ -39,7 +41,9 @@ services:
       - backend
     environment:
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
-      API_BASE_URL: "http://backend:8000/api/v3"
+      BACKEND_HOST: "backend"
+      BACKEND_PORT: "${BACKEND_PORT:-8000}"
+      API_BASE_URL: "http://backend:${BACKEND_PORT:-8000}/api/v3"
     command: ["python", "-m", "bot.bot"]
 
 volumes:

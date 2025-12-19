@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/. .
 
-EXPOSE 8000
+# Порт по умолчанию (можно переопределить через переменную окружения PORT)
+ARG DEFAULT_PORT=8000
+EXPOSE ${DEFAULT_PORT}
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Порт и хост можно переопределить через переменные окружения PORT и HOST
+CMD ["sh", "-c", "uvicorn main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000}"]
 
 
