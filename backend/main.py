@@ -78,3 +78,5 @@ async def health_check(
         "status": "healthy",
         "database": db_status,
     }
+
+

@@ -13,18 +13,18 @@ from dependencies import get_current_user
 
 router = APIRouter(
     prefix="/auth",
-    tags=["authentication"]
+    tags=["authentication"],
 )
 
 
 @router.post(
     "/register",
     response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
 )
 async def register(
     user_data: UserCreate,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     # Проверяем, не занят ли email
     result = await db.execute(
@@ -33,7 +33,7 @@ async def register(
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с таким email уже существует"
+            detail="Пользователь с таким email уже существует",
         )
 
     # Проверяем, не занят ли nickname
@@ -43,7 +43,7 @@ async def register(
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с таким никнеймом уже существует"
+            detail="Пользователь с таким никнеймом уже существует",
         )
 
     # Создаем нового пользователя
@@ -51,7 +51,7 @@ async def register(
         nickname=user_data.nickname,
         email=user_data.email,
         hashed_password=get_password_hash(user_data.password),
-        role=UserRole.USER
+        role=UserRole.USER,
     )
 
     db.add(new_user)
@@ -64,7 +64,7 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
 ):
     # Ищем пользователя по email (username в форме = email)
     result = await db.execute(
@@ -90,9 +90,10 @@ async def login(
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     return current_user
+
 
 @router.patch("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
@@ -115,6 +116,7 @@ async def change_password(
     await db.refresh(current_user)
 
     return {"message": "Пароль успешно изменён"}
+
 
 @router.get("/admin/users", response_model=List[dict])
 async def get_users_with_task_counts(
@@ -156,3 +158,5 @@ async def get_users_with_task_counts(
         }
         for row in rows
     ]
+
+

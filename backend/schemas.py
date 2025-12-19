@@ -10,20 +10,20 @@ class TaskBase(BaseModel):
         ...,  # троеточие означает "обязательное поле"
         min_length=3,
         max_length=100,
-        description="Название задачи"
+        description="Название задачи",
     )
     description: Optional[str] = Field(
         None,  # None = необязательное поле
         max_length=500,
-        description="Описание задачи"
+        description="Описание задачи",
     )
     is_important: bool = Field(
         ...,
-        description="Важность задачи"
+        description="Важность задачи",
     )
     deadline_at: Optional[datetime] = Field(
         None,
-        description="Крайний срок выполнения задачи"
+        description="Крайний срок выполнения задачи",
     )
 
 
@@ -40,28 +40,28 @@ class TaskUpdate(BaseModel):
         None,
         min_length=3,
         max_length=100,
-        description="Новое название задачи"
+        description="Новое название задачи",
     )
     description: Optional[str] = Field(
         None,
         max_length=500,
-        description="Новое описание"
+        description="Новое описание",
     )
     is_important: Optional[bool] = Field(
         None,
-        description="Новая важность"
+        description="Новая важность",
     )
     is_urgent: Optional[bool] = Field(
         None,
-        description="Новая срочность"
+        description="Новая срочность",
     )
     completed: Optional[bool] = Field(
         None,
-        description="Статус выполнения"
+        description="Статус выполнения задачи",
     )
     deadline_at: Optional[datetime] = Field(
         None,
-        description="Новый крайний срок"
+        description="Новый крайний срок",
     )
 
 
@@ -72,20 +72,20 @@ class TaskResponse(TaskBase):
     id: int = Field(
         ...,
         description="Уникальный идентификатор задачи",
-        examples=[1]
+        examples=[1],
     )
     quadrant: str = Field(
         ...,
         description="Квадрант матрицы Эйзенхауэра (Q1, Q2, Q3, Q4)",
-        examples=["Q1"]
+        examples=["Q1"],
     )
     completed: bool = Field(
         default=False,
-        description="Статус выполнения задачи"
+        description="Статус выполнения задачи",
     )
     created_at: datetime = Field(
         ...,
-        description="Дата и время создания задачи"
+        description="Дата и время создания задачи",
     )
 
     @computed_field
@@ -94,30 +94,32 @@ class TaskResponse(TaskBase):
         if self.deadline_at is None:
             return None
         return (self.deadline_at.date() - datetime.utcnow().date()).days
-    
+
     @computed_field
     @property
     def is_urgent(self) -> bool:
-
         return is_urgent_from_deadline(self.deadline_at)
-    
+
     class Config:  # Config класс для работы с ORM (понадобится после подключения СУБД)
         from_attributes = True
+
 
 class TimingStatsResponse(BaseModel):
     completed_on_time: int = Field(
         ...,
-        description="Количество задач, завершенных в срок"
+        description="Количество задач, завершенных в срок",
     )
     completed_late: int = Field(
         ...,
-        description="Количество задач, завершенных с нарушением сроков"
+        description="Количество задач, завершенных с нарушением сроков",
     )
     on_plan_pending: int = Field(
         ...,
-        description="Количество задач в работе, выполняемых в соответствии с планом"
+        description="Количество задач в работе, выполняемых в соответствии с планом",
     )
     overtime_pending: int = Field(
         ...,
-        description="Количество просроченных незавершенных задач"
+        description="Количество просроченных незавершенных задач",
     )
+
+

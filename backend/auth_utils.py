@@ -13,6 +13,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 часа
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -41,3 +42,5 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+

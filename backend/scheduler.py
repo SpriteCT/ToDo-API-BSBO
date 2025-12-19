@@ -17,7 +17,7 @@ async def update_task_urgency():
                 select(Task).where(Task.completed == False)
             )
             tasks = result.scalars().all()
-        
+
             updated_count = 0
 
             for task in tasks:
@@ -73,3 +73,5 @@ def start_scheduler():
     print("Планировщик задач запущен")
 
     return scheduler
+
+

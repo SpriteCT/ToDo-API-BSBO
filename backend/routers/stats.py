@@ -48,6 +48,7 @@ async def get_tasks_stats(
         "by_status": by_status,
     }
 
+
 @router.get("/deadlines", response_model=list[dict])
 async def get_pending_deadlines(
     db: AsyncSession = Depends(get_async_session),
@@ -81,6 +82,7 @@ async def get_pending_deadlines(
             }
         )
     return data
+
 
 @router.get("/timing", response_model=TimingStatsResponse)
 async def get_deadline_stats(
@@ -159,3 +161,5 @@ async def get_deadline_stats(
         on_plan_pending=stats_row.on_plan_pending or 0,
         overtime_pending=stats_row.overdue_pending or 0,
     )
+
+

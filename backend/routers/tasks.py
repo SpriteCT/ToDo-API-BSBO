@@ -16,8 +16,9 @@ from sqlalchemy.sql import func
 router = APIRouter(
     prefix="/tasks",
     tags=["tasks"],
-    responses={404: {"description" : "Task not found"}},
+    responses={404: {"description": "Task not found"}},
 )
+
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
@@ -25,7 +26,6 @@ async def create_task(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskResponse:
-
     # Определяем квадрант
     quadrant = calc_quadrant(task.is_important, task.deadline_at)
 
@@ -46,13 +46,11 @@ async def create_task(
     return new_task
 
 
-
 @router.get("", response_model=List[TaskResponse])
 async def get_all_tasks(
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> List[TaskResponse]:
-
     # Если пользователь - admin, показываем все задачи
     if current_user.role.value == "admin":
         result = await db.execute(select(Task))
@@ -65,7 +63,6 @@ async def get_all_tasks(
     tasks = result.scalars().all()
 
     return tasks
-
 
 
 @router.get("/quadrant/{quadrant}", response_model=List[TaskResponse])
@@ -99,7 +96,6 @@ async def get_tasks_by_quadrant(
     return tasks
 
 
-
 @router.get("/status/{status}", response_model=List[TaskResponse])
 async def get_tasks_by_status(
     status: str,
@@ -128,7 +124,6 @@ async def get_tasks_by_status(
 
     tasks = result.scalars().all()
     return tasks
-
 
 
 @router.get("/search", response_model=List[TaskResponse])
@@ -191,6 +186,7 @@ async def get_tasks_due_today(
         )
 
     return tasks
+
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task_by_id(
@@ -255,8 +251,6 @@ async def update_task(
     return task
 
 
-
-
 @router.patch("/{task_id}/complete", response_model=TaskResponse)
 async def complete_task(
     task_id: int,
@@ -288,7 +282,6 @@ async def complete_task(
     await db.refresh(task)
 
     return task
-
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_200_OK)

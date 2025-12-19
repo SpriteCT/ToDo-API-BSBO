@@ -4,75 +4,78 @@ from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
 
+
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(
         Integer,
-        primary_key=True, # Первичный ключ
-        index=True, # Создать индекс для быстрого поиска
-        autoincrement=True # Автоматическая генерация
+        primary_key=True,  # Первичный ключ
+        index=True,  # Создать индекс для быстрого поиска
+        autoincrement=True,  # Автоматическая генерация
     )
     title = Column(
-    Text, # Text = текст неограниченной длины
-    nullable=False # Не может быть NULL
+        Text,  # Text = текст неограниченной длины
+        nullable=False,  # Не может быть NULL
     )
 
     description = Column(
         Text,
-        nullable=True # Может быть NULL
+        nullable=True,  # Может быть NULL
     )
 
     is_important = Column(
         Boolean,
         nullable=False,
-        default=False # По умолчанию False
+        default=False,  # По умолчанию False
     )
 
     is_urgent = Column(
-    Boolean,
-    nullable=False,
-    default=False
-    )  
+        Boolean,
+        nullable=False,
+        default=False,
+    )
 
     quadrant = Column(
-    String(2), # Максимум 2 символа: "Q1", "Q2", "Q3", "Q4"
-    nullable=False
+        String(2),  # Максимум 2 символа: "Q1", "Q2", "Q3", "Q4"
+        nullable=False,
     )
 
     completed = Column(
         Boolean,
         nullable=False,
-        default=False
+        default=False,
     )
 
     created_at = Column(
-        DateTime(timezone=True), # С поддержкой часовых поясов
-        server_default=func.now(), # Автоматически текущее время
-        nullable=False
+        DateTime(timezone=True),  # С поддержкой часовых поясов
+        server_default=func.now(),  # Автоматически текущее время
+        nullable=False,
     )
 
     completed_at = Column(
         DateTime(timezone=True),
-        nullable=True # NULL пока задача не завершена
+        nullable=True,  # NULL пока задача не завершена
     )
 
     deadline_at = Column(
         DateTime(timezone=True),
-        nullable=True
+        nullable=True,
     )
     user_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     owner = relationship(
         "User",
-        back_populates="tasks"
+        back_populates="tasks",
     )
+
 
 def __repr__(self) -> str:
     return f"<Task(id={self.id}, title='{self.title}', quadrant='{self.quadrant}')>"
+
 
 def to_dict(self) -> dict:
     return {
@@ -87,4 +90,6 @@ def to_dict(self) -> dict:
         "completed_at": self.completed_at,
         "deadline_at": self.deadline_at,
         "user_id": self.user_id,
-}
+    }
+
+
