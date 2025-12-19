@@ -59,28 +59,17 @@ SESSIONS: Dict[int, UserSession] = {}
 # Сдвиг часового пояса пользователя относительно UTC, в часах: chat_id -> offset
 TIMEZONE_OFFSETS: Dict[int, int] = {}
 
+# Время последней отправки напоминания для каждого пользователя: chat_id -> datetime
+LAST_REMINDER_SENT: Dict[int, datetime] = {}
+
 
 router = Router()
 api_client = ApiClient()
 
 
-def _format_task(task: dict) -> str:
-    deadline = task.get("deadline_at")
-    deadline_str = deadline if deadline else "без дедлайна"
-    status = "✅" if task.get("completed") else "⏳"
-    quadrant = task.get("quadrant", "?")
-    return (
-        f"ID: {task.get('id')} {status}\n"
-        f"Название: {task.get('title')}\n"
-        f"Описание: {task.get('description') or '-'}\n"
-        f"Квадрант: {quadrant}\n"
-        f"Дедлайн: {deadline_str}\n"
-    )
-
-
 def _get_utc_offset_hours(chat_id: int) -> int:
-    """Возвращает сдвиг часового пояса для чата в часах (по умолчанию 0 = UTC)."""
-    return TIMEZONE_OFFSETS.get(chat_id, 0)
+    """Возвращает сдвиг часового пояса для чата в часах (по умолчанию +3)."""
+    return TIMEZONE_OFFSETS.get(chat_id, 3)
 
 
 def _local_to_utc(chat_id: int, dt_local: datetime) -> datetime:
@@ -88,6 +77,39 @@ def _local_to_utc(chat_id: int, dt_local: datetime) -> datetime:
     offset = _get_utc_offset_hours(chat_id)
     dt_utc = dt_local - timedelta(hours=offset)
     return dt_utc.replace(tzinfo=timezone.utc)
+
+
+def _utc_to_local(chat_id: int, dt_utc: datetime) -> datetime:
+    """Преобразует время из UTC в локальное время пользователя."""
+    if dt_utc is None:
+        return None
+    if dt_utc.tzinfo is None:
+        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+    offset = _get_utc_offset_hours(chat_id)
+    return dt_utc + timedelta(hours=offset)
+
+
+def _format_task(task: dict, chat_id: int) -> str:
+    raw_deadline = task.get("deadline_at")
+    if raw_deadline:
+        try:
+            dt_utc = datetime.fromisoformat(raw_deadline)
+            dt_local = _utc_to_local(chat_id, dt_utc)
+            deadline_str = dt_local.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            deadline_str = str(raw_deadline)
+    else:
+        deadline_str = "без дедлайна"
+
+    status = "✅" if task.get("completed") else "⏳"
+    quadrant = task.get("quadrant", "?")
+    return (
+        f"ID: {task.get('id')} {status}\n"
+        f"Название: {task.get('title')}\n"
+        f"Описание: {task.get('description') or '-'}\n"
+        f"Квадрант: {quadrant}\n"
+        f"Дедлайн (локальное время): {deadline_str}\n"
+    )
 
 
 async def _require_session(message: Message) -> Optional[UserSession]:
@@ -335,7 +357,7 @@ async def cmd_tasks(message: Message) -> None:
         await message.answer("У вас пока нет задач.")
         return
 
-    text = "Ваши задачи:\n\n" + "\n".join(_format_task(t) for t in tasks)
+    text = "Ваши задачи:\n\n" + "\n".join(_format_task(t, message.chat.id) for t in tasks)
     await message.answer(text)
 
 
@@ -355,7 +377,7 @@ async def cmd_today(message: Message) -> None:
         await message.answer("На сегодня задач нет.")
         return
 
-    text = "Задачи на сегодня:\n\n" + "\n".join(_format_task(t) for t in tasks)
+    text = "Задачи на сегодня:\n\n" + "\n".join(_format_task(t, message.chat.id) for t in tasks)
     await message.answer(text)
 
 
@@ -381,7 +403,7 @@ async def cmd_search(message: Message) -> None:
         await message.answer("Ничего не найдено.")
         return
 
-    text = "Результаты поиска:\n\n" + "\n".join(_format_task(t) for t in tasks)
+    text = "Результаты поиска:\n\n" + "\n".join(_format_task(t, message.chat.id) for t in tasks)
     await message.answer(text)
 
 
@@ -467,7 +489,7 @@ async def new_task_deadline(message: Message, state: FSMContext) -> None:
         await state.clear()
         return
 
-    await message.answer("Задача создана:\n\n" + _format_task(task))
+    await message.answer("Задача создана:\n\n" + _format_task(task, message.chat.id))
     await state.clear()
 
 
@@ -567,7 +589,7 @@ async def edit_task_deadline(message: Message, state: FSMContext) -> None:
         await state.clear()
         return
 
-    await message.answer("Задача обновлена:\n\n" + _format_task(task))
+    await message.answer("Задача обновлена:\n\n" + _format_task(task, message.chat.id))
     await state.clear()
 
 
@@ -600,7 +622,7 @@ async def cmd_complete(message: Message) -> None:
         await message.answer(f"Не удалось завершить задачу: {e}")
         return
 
-    await message.answer("Задача отмечена как выполненная:\n\n" + _format_task(task))
+    await message.answer("Задача отмечена как выполненная:\n\n" + _format_task(task, message.chat.id))
 
 
 @router.message(Command("delete"))
@@ -637,10 +659,20 @@ async def reminders_worker(bot: Bot) -> None:
     """
     Периодически обходит авторизованных пользователей и напоминает
     о задачах с приближающимся дедлайном (0-1 дней до дедлайна).
+    Напоминания отправляются не чаще одного раза в сутки для каждого пользователя.
     """
     while True:
         try:
+            now = datetime.now(timezone.utc)
+            
             for chat_id, session in list(SESSIONS.items()):
+                # Проверяем, прошло ли 24 часа с последнего напоминания
+                last_sent = LAST_REMINDER_SENT.get(chat_id)
+                if last_sent:
+                    time_since_last = now - last_sent
+                    if time_since_last < timedelta(hours=24):
+                        continue  # Ещё не прошло 24 часа, пропускаем
+                
                 try:
                     deadlines = await api_client.get_deadlines(token=session.access_token)
                 except Exception:
@@ -664,6 +696,8 @@ async def reminders_worker(bot: Bot) -> None:
                     text_lines.append(f"• {title} — осталось дней: {days_left}")
 
                 await bot.send_message(chat_id=chat_id, text="\n".join(text_lines))
+                # Сохраняем время отправки напоминания
+                LAST_REMINDER_SENT[chat_id] = now
         except Exception:
             # Глобальная защита от падения цикла
             pass
