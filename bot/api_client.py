@@ -143,9 +143,18 @@ class ApiClient:
         return resp.json()
 
     async def search_tasks(self, token: str, query: str) -> List[Dict[str, Any]]:
+        """
+        Возвращает результаты поиска задач.
+        Если backend отвечает 404 (ничего не найдено), возвращает пустой список.
+        """
         headers = {"Authorization": f"Bearer {token}"}
-        resp = await self._client.get("/tasks/search", params={"q": query}, headers=headers)
-        resp.raise_for_status()
+        try:
+            resp = await self._client.get("/tasks/search", params={"q": query}, headers=headers)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return []
+            raise
         return resp.json()
 
     # ---------- Статистика / дедлайны ----------
